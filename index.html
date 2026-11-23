@@ -1,0 +1,349 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>DCC Markup & Commission Calculator</title>
+<style>
+:root{--bg:#faf9f5;--panel:#fff;--ink:#1f1e1d;--muted:#6b6862;--line:#e6e3da;--accent:#2f6fb5;--accent-soft:#e8f0fa;--good:#2e7d4f;--bad:#b3392b;--warn:#a86a12;--c1:#2f6fb5;--c2:#d9822b;--c3:#3c9a6b;--radius:10px}
+@media (prefers-color-scheme: dark){:root{--bg:#1c1b19;--panel:#262522;--ink:#ecebe6;--muted:#a8a59c;--line:#3a3935;--accent:#6aa3e0;--accent-soft:#22324a;--good:#5cbf86;--bad:#e57063;--warn:#e0a54a;--c1:#6aa3e0;--c2:#e9a25a;--c3:#5cbf86}}
+*{box-sizing:border-box}
+body{margin:0;background:var(--bg);color:var(--ink);font:15px/1.45 system-ui,-apple-system,"Segoe UI",Roboto,sans-serif}
+.wrap{max-width:1180px;margin:0 auto;padding:28px 20px 48px}
+h1{font:400 30px/1.2 Georgia,"Times New Roman",serif;margin:0 0 6px}
+.lede{color:var(--muted);margin:0 0 22px;max-width:62em}
+.grid{display:grid;grid-template-columns:minmax(300px,380px) 1fr;gap:20px;align-items:start}
+@media (max-width:860px){.grid{grid-template-columns:1fr}}
+.card{background:var(--panel);border:1px solid var(--line);border-radius:var(--radius);padding:18px}
+.card h2{font-size:16px;margin:0 0 4px}
+.card .hint{font-size:12.5px;color:var(--muted);margin:0 0 12px}
+fieldset{border:0;padding:0;margin:0 0 18px}
+legend{font-weight:600;font-size:13px;text-transform:uppercase;letter-spacing:.04em;color:var(--muted);margin-bottom:8px}
+.row{display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-bottom:10px}
+.row.one{grid-template-columns:1fr}
+label{display:flex;flex-direction:column;gap:4px;font-size:13px;color:var(--muted)}
+input,select{font:inherit;font-size:14px;color:var(--ink);background:var(--bg);border:1px solid var(--line);border-radius:8px;padding:8px 10px;width:100%}
+input:focus,select:focus{outline:2px solid var(--accent);outline-offset:0;border-color:transparent}
+input[readonly]{background:transparent;color:var(--muted)}
+.presets{display:flex;flex-wrap:wrap;gap:6px;margin-bottom:14px}
+.btn{font:inherit;font-size:13px;border:1px solid var(--line);background:var(--panel);color:var(--ink);border-radius:999px;padding:5px 12px;cursor:pointer}
+.btn:hover{border-color:var(--accent)}
+.btn.primary{background:var(--accent);color:#fff;border-color:var(--accent);border-radius:8px;padding:8px 14px}
+.warn{color:var(--warn);font-size:12.5px;margin:-4px 0 8px;min-height:1em}
+.out{display:flex;flex-direction:column;gap:20px}
+.kpis{display:grid;grid-template-columns:repeat(auto-fit,minmax(170px,1fr));gap:12px}
+.kpi{background:var(--panel);border:1px solid var(--line);border-radius:var(--radius);padding:14px}
+.kpi .v{font:400 26px/1.15 Georgia,serif;font-variant-numeric:tabular-nums}
+.kpi .l{font-size:12.5px;color:var(--muted);margin-top:4px}
+.verdict{font-weight:600}
+.verdict.good{color:var(--good)}.verdict.bad{color:var(--bad)}.verdict.eq{color:var(--warn)}
+table{border-collapse:collapse;width:100%;font-size:13.5px}
+th,td{text-align:left;padding:8px 10px;border-bottom:1px solid var(--line)}
+th{font-size:12.5px;color:var(--muted);font-weight:600}
+td.n,th.n{text-align:right;font-variant-numeric:tabular-nums;white-space:nowrap}
+.tablewrap{overflow-x:auto}
+.bar{display:flex;height:16px;border-radius:999px;overflow:hidden;margin:6px 0 10px;background:var(--line)}
+.bar span{display:block;height:100%}
+.legend{display:flex;flex-wrap:wrap;gap:14px;font-size:12.5px;color:var(--muted)}
+.legend i{display:inline-block;width:10px;height:10px;border-radius:50%;margin-right:6px;vertical-align:-1px}
+.screen{display:grid;grid-template-columns:1fr 1fr;gap:12px;margin-top:8px}
+.choice{border:1.5px solid var(--line);border-radius:10px;padding:12px;text-align:center;background:var(--bg)}
+.choice .big{font:600 20px/1.2 system-ui,sans-serif;font-variant-numeric:tabular-nums}
+.choice .small{font-size:12px;color:var(--muted);margin-top:4px}
+.receipt{font:12.5px/1.6 ui-monospace,Menlo,Consolas,monospace;background:var(--bg);border:1px dashed var(--line);border-radius:8px;padding:12px;margin-top:12px;white-space:pre-wrap}
+tr.cur td{background:var(--accent-soft);font-weight:600}
+.foot{font-size:12px;color:var(--muted);margin-top:24px;line-height:1.5}
+.copyrow{display:flex;gap:10px;align-items:center;flex-wrap:wrap}
+#copyMsg{font-size:12.5px;color:var(--muted)}
+</style>
+</head>
+<body>
+<div class="wrap">
+<h1>DCC markup & commission calculator</h1>
+<p class="lede">Work out what a DCC transaction costs the shopper, how the markup splits between the merchant, Global Payments and the DCC provider, and what that adds up to per month. Every number updates as you type. Rates in the presets are illustrative: replace them with today's reference rate.</p>
+
+<div class="grid">
+<form class="card" id="form" autocomplete="off">
+<h2>Inputs</h2>
+<p class="hint">Quick start with a corridor, then adjust.</p>
+<div class="presets" id="presets">
+<button type="button" class="btn" data-p="usmx">US card in Mexico</button>
+<button type="button" class="btn" data-p="caus">Canadian card in US</button>
+<button type="button" class="btn" data-p="mxus">Mexican card in US</button>
+<button type="button" class="btn" data-p="ukes">UK card in Spain</button>
+<button type="button" class="btn" data-p="usca">US card in Canada</button>
+</div>
+
+<fieldset>
+<legend>Transaction</legend>
+<div class="row">
+<label>Merchant (local) currency<input id="mcy" value="MXN" maxlength="3"></label>
+<label>Cardholder (home) currency<input id="ccy" value="USD" maxlength="3"></label>
+</div>
+<div class="row">
+<label>Purchase amount (local)<input id="amt" type="number" min="0" step="0.01" value="2000"></label>
+<label><span>Reference rate: 1 <span data-t="ccy">USD</span> = ? <span data-t="mcy">MXN</span></span><input id="ref" type="number" min="0" step="0.0001" value="18.00"></label>
+</div>
+<div class="row">
+<label>Reference rate source<select id="refsrc"><option>mid-market rate</option><option>ECB reference rate</option><option>Visa rate</option><option>Mastercard rate</option><option>wholesale rate</option></select></label>
+<label>DCC markup over reference (%)<input id="mk" type="number" min="0" step="0.05" value="4"></label>
+</div>
+</fieldset>
+
+<fieldset>
+<legend>How the markup is shared</legend>
+<div class="row">
+<label>Merchant share of markup (%)<input id="shM" type="number" min="0" max="100" step="0.5" value="25"></label>
+<label>Global Payments share (%)<input id="shG" type="number" min="0" max="100" step="0.5" value="15"></label>
+</div>
+<div class="row">
+<label>DCC provider share (%) <input id="shP" readonly></label>
+<label>Costs (scheme, FX, processing) in bps of amount<input id="cost" type="number" min="0" step="1" value="20"></label>
+</div>
+<div class="row one">
+<label>Who pays those costs<select id="costWho"><option value="P">DCC provider</option><option value="G">Global Payments</option><option value="S">Split by share</option><option value="C">Cardholder (added to the DCC price)</option></select></label>
+</div>
+<p class="warn" id="shareWarn"></p>
+</fieldset>
+
+<fieldset>
+<legend>Shopper's alternative</legend>
+<div class="row one">
+<label>Shopper's bank FX fee if they pay in local currency (%)<input id="fee" type="number" min="0" step="0.05" value="3"></label>
+</div>
+</fieldset>
+
+<fieldset>
+<legend>Monthly projection</legend>
+<div class="row">
+<label>Eligible foreign-card volume per month (local)<input id="vol" type="number" min="0" step="1000" value="10000000"></label>
+<label>Acceptance rate at this markup (%)<input id="acc" type="number" min="0" max="100" step="0.5" value="15"></label>
+</div>
+<div class="row one">
+<label>Acceptance change per +1 point of markup (points, for the sensitivity table)<input id="el" type="number" step="0.5" value="-3"></label>
+</div>
+</fieldset>
+</form>
+
+<div class="out">
+<div class="kpis">
+<div class="kpi"><div class="v" id="kRate">—</div><div class="l" id="kRateL">DCC rate offered</div></div>
+<div class="kpi"><div class="v" id="kPay">—</div><div class="l">Shopper pays with DCC</div></div>
+<div class="kpi"><div class="v" id="kMk">—</div><div class="l">Markup earned on this purchase</div></div>
+<div class="kpi"><div class="v" id="kMonth">—</div><div class="l">Total markup revenue per month</div></div>
+</div>
+
+<section class="card">
+<h2>Shopper view</h2>
+<p class="hint">What the cardholder sees, and what it costs them versus paying in local currency with their bank's fee.</p>
+<div class="screen" aria-label="Neutral two-option DCC screen preview">
+<div class="choice"><div class="small">Pay in <span data-t="mcy">MXN</span></div><div class="big" id="sLocal">—</div><div class="small">Your bank converts; its fees apply</div></div>
+<div class="choice"><div class="small">Pay in <span data-t="ccy">USD</span></div><div class="big" id="sDcc">—</div><div class="small" id="sDccNote">—</div></div>
+</div>
+<table style="margin-top:14px">
+<tbody>
+<tr><td>Pay in <span data-t="ccy">USD</span> with DCC</td><td class="n" id="tDcc">—</td></tr>
+<tr><td>Pay in <span data-t="mcy">MXN</span>, bank converts at reference + <span id="tFeeP">—</span></td><td class="n" id="tLocal">—</td></tr>
+<tr><td>Difference for the shopper</td><td class="n" id="tDiff">—</td></tr>
+<tr><td>Verdict</td><td class="n"><span class="verdict" id="tVerdict">—</span></td></tr>
+<tr><td>Effective markup the shopper pays</td><td class="n" id="tEff">—</td></tr>
+<tr><td>Break-even markup (DCC costs the same as the bank fee)</td><td class="n" id="tBe">—</td></tr>
+</tbody>
+</table>
+<div class="receipt" id="receipt">—</div>
+</section>
+
+<section class="card">
+<h2>Commission split on this purchase</h2>
+<p class="hint">Markup = DCC amount minus the amount at the reference rate. Costs are deducted from the party you chose, or added to the shopper's price when the cardholder pays them.</p>
+<div class="bar" id="splitBar"></div>
+<div class="legend"><span><i style="background:var(--c1)"></i>Merchant</span><span><i style="background:var(--c2)"></i>Global Payments</span><span><i style="background:var(--c3)"></i>DCC provider</span></div>
+<div class="tablewrap" style="margin-top:10px">
+<table>
+<thead><tr><th>Party</th><th class="n">Share of markup</th><th class="n">% of purchase</th><th class="n">Gross (<span data-t="ccy">USD</span>)</th><th class="n">Gross (<span data-t="mcy">MXN</span>)</th><th class="n">Costs (<span data-t="mcy">MXN</span>)</th><th class="n">Net (<span data-t="mcy">MXN</span>)</th></tr></thead>
+<tbody id="splitBody"></tbody>
+</table>
+</div>
+</section>
+
+<section class="card">
+<h2>Monthly and annual projection</h2>
+<p class="hint">Accepted volume = eligible volume × acceptance rate. Revenue uses the same split and costs.</p>
+<div class="tablewrap">
+<table>
+<thead><tr><th>Party</th><th class="n">Net per month (<span data-t="mcy">MXN</span>)</th><th class="n">Net per year (<span data-t="mcy">MXN</span>)</th><th class="n">% of eligible volume</th></tr></thead>
+<tbody id="projBody"></tbody>
+</table>
+</div>
+</section>
+
+<section class="card">
+<h2>Markup sensitivity</h2>
+<p class="hint">Acceptance moves by your elasticity setting for each point of markup away from the current one. Highlighted row = your inputs.</p>
+<div class="tablewrap">
+<table>
+<thead><tr><th class="n">Markup</th><th class="n">Est. acceptance</th><th class="n">Total markup / month</th><th class="n">Merchant net / month</th><th class="n">Global Payments net / month</th><th>DCC vs bank fee</th></tr></thead>
+<tbody id="sensBody"></tbody>
+</table>
+</div>
+</section>
+
+<section class="card">
+<h2>Share this scenario</h2>
+<p class="hint">Copies a plain-text summary of these inputs and results to paste into email or chat.</p>
+<div class="copyrow"><button type="button" class="btn primary" id="copyBtn">Copy scenario summary</button><span id="copyMsg"></span></div>
+</section>
+
+<p class="foot">Illustrative calculator. The markup is measured over the reference rate you enter; scheme rules require the cardholder to choose freely between the two currencies, with the rate and markup shown on screen and receipt, and EU/UK rules require the markup over the ECB rate. Real provider contracts may define rebates as a % of DCC volume rather than a share of markup: a rebate of R% of volume equals a markup share of R ÷ markup.</p>
+</div>
+</div>
+</div>
+
+<script>
+const $ = (id) => document.getElementById(id);
+const presets = {
+  usmx: {mcy: 'MXN', ccy: 'USD', amt: 2000, ref: 18.0, mk: 4, fee: 3},
+  caus: {mcy: 'USD', ccy: 'CAD', amt: 120, ref: 0.72, mk: 4, fee: 2.5},
+  mxus: {mcy: 'USD', ccy: 'MXN', amt: 120, ref: 0.055, mk: 4, fee: 3},
+  ukes: {mcy: 'EUR', ccy: 'GBP', amt: 80, ref: 1.17, mk: 3.5, fee: 2.99},
+  usca: {mcy: 'CAD', ccy: 'USD', amt: 150, ref: 1.39, mk: 4, fee: 3}
+};
+const num = (id) => { const v = parseFloat($(id).value); return isFinite(v) ? v : 0; };
+const code = (id) => ($(id).value || '').trim().toUpperCase().slice(0, 3);
+const money = (v, c) => { try { return new Intl.NumberFormat(undefined, {style: 'currency', currency: c, maximumFractionDigits: 2}).format(v); } catch (e) { return v.toLocaleString(undefined, {maximumFractionDigits: 2}) + ' ' + c; } };
+const pct = (v, d = 2) => (isFinite(v) ? v.toFixed(d) : '—') + '%';
+const rateFmt = (v) => isFinite(v) && v > 0 ? (v >= 10 ? v.toFixed(4) : v.toFixed(6).replace(/0+$/, '').replace(/\.$/, '')) : '—';
+
+function compute(mkOverride, accOverride) {
+  const mcy = code('mcy') || 'LCL', ccy = code('ccy') || 'HOME';
+  const amt = num('amt'), ref = num('ref'), mk = mkOverride ?? num('mk'), fee = num('fee');
+  const shM = Math.max(0, num('shM')), shG = Math.max(0, num('shG')), shP = Math.max(0, 100 - shM - shG);
+  const costBps = num('cost'), who = $('costWho').value;
+  const vol = num('vol'), acc = accOverride ?? num('acc');
+  // Reference rate is 1 home = ref local; home amount at reference = amt / ref
+  const homeAtRef = ref > 0 ? amt / ref : 0;
+  const costLocal0 = amt * num('cost') / 10000;
+  const cardholderPays = $('costWho').value === 'C';
+  const dccHome = homeAtRef * (1 + mk / 100) + (cardholderPays && ref > 0 ? costLocal0 / ref : 0);
+  const dccRate = dccHome > 0 ? amt / dccHome : 0; // local per 1 home, as offered (incl. any cardholder-paid costs)
+  const effMk = homeAtRef > 0 ? (dccHome / homeAtRef - 1) * 100 : 0;
+  const offeredHomePerLocal = ref > 0 ? (1 + mk / 100) / ref : 0;
+  const localPathHome = homeAtRef * (1 + fee / 100);
+  const markupHome = homeAtRef * mk / 100;
+  const markupLocal = markupHome * ref;
+  const costLocal = amt * costBps / 10000;
+  const parties = [
+    {k: 'M', name: 'Merchant', share: shM, col: 'var(--c1)'},
+    {k: 'G', name: 'Global Payments', share: shG, col: 'var(--c2)'},
+    {k: 'P', name: 'DCC provider', share: shP, col: 'var(--c3)'}
+  ].map((p) => {
+    const grossLocal = markupLocal * p.share / 100;
+    let c = 0;
+    if (who === 'S') c = costLocal * p.share / 100; else if (who === p.k) c = costLocal;
+    return {...p, grossLocal, grossHome: markupHome * p.share / 100, cost: c, net: grossLocal - c, pctOfAmt: amt > 0 ? grossLocal / amt * 100 : 0};
+  });
+  const accepted = vol * acc / 100;
+  const scale = amt > 0 ? accepted / amt : 0; // number of "purchases" worth of volume
+  return {mcy, ccy, amt, ref, mk, fee, effMk, cardholderPays, shM, shG, shP, costBps, who, vol, acc, homeAtRef, dccHome, dccRate, offeredHomePerLocal, localPathHome, markupHome, markupLocal, costLocal, parties, accepted, scale, over: (shM + shG) > 100};
+}
+
+function render() {
+  const r = compute();
+  document.querySelectorAll('[data-t="mcy"]').forEach((e) => { e.textContent = r.mcy; });
+  document.querySelectorAll('[data-t="ccy"]').forEach((e) => { e.textContent = r.ccy; });
+  $('shP').value = r.shP.toFixed(1);
+  $('shareWarn').textContent = r.over ? 'Merchant + Global Payments shares exceed 100%; the DCC provider share has been set to 0%.' : '';
+
+  $('kRate').textContent = `1 ${r.ccy} = ${rateFmt(r.dccRate)} ${r.mcy}`;
+  $('kRateL').textContent = `DCC rate offered (reference ${rateFmt(r.ref)})`;
+  $('kPay').textContent = money(r.dccHome, r.ccy);
+  $('kMk').textContent = money(r.markupLocal, r.mcy);
+  $('kMonth').textContent = money(r.markupLocal * r.scale, r.mcy);
+
+  $('sLocal').textContent = money(r.amt, r.mcy);
+  $('sDcc').textContent = money(r.dccHome, r.ccy);
+  $('sDccNote').textContent = `Rate 1 ${r.ccy} = ${rateFmt(r.dccRate)} ${r.mcy}, incl. ${pct(r.effMk)} markup`;
+  $('tDcc').textContent = money(r.dccHome, r.ccy);
+  $('tFeeP').textContent = pct(r.fee);
+  $('tLocal').textContent = money(r.localPathHome, r.ccy);
+  const diff = r.dccHome - r.localPathHome;
+  $('tDiff').textContent = (diff >= 0 ? '+' : '−') + money(Math.abs(diff), r.ccy) + ` (${diff >= 0 ? '+' : '−'}${pct(Math.abs(r.homeAtRef ? diff / r.homeAtRef * 100 : 0))})`;
+  const v = $('tVerdict');
+  const tol = r.homeAtRef * 0.0005;
+  if (Math.abs(diff) <= tol) { v.textContent = 'About the same'; v.className = 'verdict eq'; }
+  else if (diff > 0) { v.textContent = 'DCC costs the shopper more'; v.className = 'verdict bad'; }
+  else { v.textContent = 'DCC is cheaper for the shopper'; v.className = 'verdict good'; }
+  $('tEff').textContent = pct(r.effMk);
+  $('tBe').textContent = pct(r.fee);
+
+  $('receipt').textContent =
+`Transaction amount          ${money(r.amt, r.mcy)}
+Exchange rate               1 ${r.ccy} = ${rateFmt(r.dccRate)} ${r.mcy}
+Markup over ${$('refsrc').value.padEnd(16)}${pct(r.effMk)}${r.cardholderPays ? `\n  (${pct(r.mk)} markup + ${pct(r.effMk - r.mk)} costs)` : ''}
+Total charged               ${money(r.dccHome, r.ccy)}
+
+I have been offered a choice of currencies and
+I agree to pay in ${r.ccy}. Currency conversion is
+provided by the merchant, not by the card network.`;
+
+  const bar = $('splitBar'); bar.replaceChildren();
+  r.parties.forEach((p) => { const s = document.createElement('span'); s.style.width = p.share + '%'; s.style.background = p.col; s.title = `${p.name} ${pct(p.share, 1)}`; bar.appendChild(s); });
+
+  const sb = $('splitBody'); sb.replaceChildren();
+  const addRow = (tb, cells, cls) => { const tr = document.createElement('tr'); if (cls) tr.className = cls; cells.forEach((c, i) => { const td = document.createElement('td'); td.textContent = c; if (i > 0) td.className = 'n'; tr.appendChild(td); }); tb.appendChild(tr); };
+  r.parties.forEach((p) => addRow(sb, [p.name, pct(p.share, 1), pct(p.pctOfAmt), money(p.grossHome, r.ccy), money(p.grossLocal, r.mcy), money(p.cost, r.mcy), money(p.net, r.mcy)]));
+  if (r.cardholderPays) addRow(sb, ['Cardholder (costs passed on)', '', pct(r.amt ? r.costLocal / r.amt * 100 : 0), money(r.costLocal / (r.ref || 1), r.ccy), money(r.costLocal, r.mcy), 'pays ' + money(r.costLocal, r.mcy), '']);
+  addRow(sb, ['Total', '100.0%', pct(r.amt ? r.markupLocal / r.amt * 100 : 0), money(r.markupHome, r.ccy), money(r.markupLocal, r.mcy), money(r.costLocal, r.mcy), money(r.markupLocal - (r.cardholderPays ? 0 : r.costLocal), r.mcy)], 'cur');
+
+  const pb = $('projBody'); pb.replaceChildren();
+  r.parties.forEach((p) => addRow(pb, [p.name, money(p.net * r.scale, r.mcy), money(p.net * r.scale * 12, r.mcy), pct(r.vol ? p.net * r.scale / r.vol * 100 : 0, 3)]));
+  addRow(pb, ['Total (accepted volume ' + money(r.accepted, r.mcy) + ')', money(r.parties.reduce((a, p) => a + p.net, 0) * r.scale, r.mcy), money(r.parties.reduce((a, p) => a + p.net, 0) * r.scale * 12, r.mcy), pct(r.vol ? r.parties.reduce((a, p) => a + p.net, 0) * r.scale / r.vol * 100 : 0, 3)], 'cur');
+
+  const el = num('el'), base = r.mk;
+  const marks = [];
+  for (let m = 1; m <= 8.0001; m += 0.5) marks.push(+m.toFixed(2));
+  if (!marks.some((m) => Math.abs(m - base) < 1e-9)) marks.push(+base.toFixed(2));
+  marks.sort((a, b) => a - b);
+  const sbody = $('sensBody'); sbody.replaceChildren();
+  marks.forEach((m) => {
+    const acc = Math.min(100, Math.max(0, r.acc + el * (m - base)));
+    const s = compute(m, acc);
+    const tot = s.markupLocal * s.scale;
+    const pm = s.parties.find((p) => p.k === 'M'), pg = s.parties.find((p) => p.k === 'G');
+    const shopper = s.effMk < s.fee - 0.05 ? 'Cheaper' : s.effMk > s.fee + 0.05 ? 'Dearer' : 'About equal';
+    addRow(sbody, [pct(m), pct(acc, 1), money(tot, s.mcy), money(pm.net * s.scale, s.mcy), money(pg.net * s.scale, s.mcy), shopper], Math.abs(m - base) < 1e-9 ? 'cur' : '');
+    sbody.lastChild.lastChild.className = ''; sbody.lastChild.lastChild.style.whiteSpace = 'nowrap';
+  });
+}
+
+function summary() {
+  const r = compute();
+  const lines = [
+    'DCC scenario',
+    `Purchase: ${money(r.amt, r.mcy)}; reference rate 1 ${r.ccy} = ${rateFmt(r.ref)} ${r.mcy} (${$('refsrc').value})`,
+    `DCC markup ${pct(r.mk)} -> rate offered 1 ${r.ccy} = ${rateFmt(r.dccRate)} ${r.mcy}; shopper pays ${money(r.dccHome, r.ccy)}`,
+    `Paying in ${r.mcy} with a ${pct(r.fee)} bank fee would cost ${money(r.localPathHome, r.ccy)}`,
+    `Markup on this purchase: ${money(r.markupLocal, r.mcy)}; costs ${r.costBps} bps (${money(r.costLocal, r.mcy)}), paid by ${$('costWho').selectedOptions[0].text}`,
+    ...r.parties.map((p) => `  ${p.name}: ${pct(p.share, 1)} of markup, net ${money(p.net, r.mcy)} per purchase, ${money(p.net * r.scale, r.mcy)} per month`),
+    `Monthly: eligible ${money(r.vol, r.mcy)} x ${pct(r.acc, 1)} acceptance = ${money(r.accepted, r.mcy)} accepted; total net ${money(r.parties.reduce((a, p) => a + p.net, 0) * r.scale, r.mcy)}`
+  ];
+  return lines.join('\n');
+}
+
+$('form').addEventListener('input', render);
+$('form').addEventListener('change', render);
+$('form').addEventListener('submit', (e) => e.preventDefault());
+$('presets').addEventListener('click', (e) => {
+  const b = e.target.closest('[data-p]'); if (!b) return;
+  const p = presets[b.dataset.p];
+  Object.entries(p).forEach(([k, v]) => { $(k).value = v; });
+  render();
+});
+$('copyBtn').addEventListener('click', async () => {
+  try { await navigator.clipboard.writeText(summary()); $('copyMsg').textContent = 'Copied.'; }
+  catch (e) { $('copyMsg').textContent = 'Copy is blocked here; select the text below instead.'; const pre = document.createElement('pre'); pre.className = 'receipt'; pre.textContent = summary(); $('copyMsg').after(pre); }
+});
+render();
+</script>
+</body>
+</html>
